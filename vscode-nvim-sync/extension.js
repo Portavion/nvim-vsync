@@ -47,6 +47,19 @@ function activate(context) {
                 }
 
                 setTimeout(() => { isRemoteUpdate = false; }, 100);
+            } else if (message.type === 'cursorMove' && message.path) {
+                const activeEditor = vscode.window.activeTextEditor;
+                if (activeEditor && activeEditor.document.uri.fsPath === message.path) {
+                    isRemoteUpdate = true;
+
+                    const position = new vscode.Position(message.line, message.character);
+                    const selection = new vscode.Selection(position, position);
+
+                    activeEditor.selection = selection;
+                    activeEditor.revealRange(new vscode.Range(position, position));
+
+                    setTimeout(() => { isRemoteUpdate = false; }, 50);
+                }
             }
         } catch (e) {
             console.error('Failed to parse incoming data', e);
@@ -72,6 +85,24 @@ function activate(context) {
         if (!isRemoteUpdate && doc.uri.scheme === 'file') {
             const payload = JSON.stringify({ type: 'closeFile', path: doc.uri.fsPath });
             client.write(payload);
+        }
+    }, null, context.subscriptions);
+
+    // 5. Listen for cursor movement
+    let debounceTimer;
+    vscode.window.onDidChangeTextEditorSelection(event => {
+        if (event.textEditor && !isRemoteUpdate && event.textEditor.document.uri.scheme === 'file') {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                const position = event.selections[0].active;
+                const payload = JSON.stringify({
+                    type: 'cursorMove',
+                    path: event.textEditor.document.uri.fsPath,
+                    line: position.line,
+                    character: position.character
+                });
+                client.write(payload);
+            }, 50);
         }
     }, null, context.subscriptions);
 }

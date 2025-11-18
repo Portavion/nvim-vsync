@@ -51,6 +51,16 @@ local function connect()
                             pcall(vim.cmd, 'bdelete ' .. bufnr)
                             vim.defer_fn(function() is_remote_update = false end, 100)
                         end
+                    elseif decoded.type == 'cursorMove' and decoded.path then
+                        local current_file = vim.fn.expand('%:p')
+                        if current_file == decoded.path then
+                            is_remote_update = true
+                            -- VS Code is 0-based line, Neovim is 1-based
+                            local line = decoded.line + 1
+                            local col = decoded.character
+                            pcall(vim.api.nvim_win_set_cursor, 0, {line, col})
+                            vim.defer_fn(function() is_remote_update = false end, 50)
+                        end
                     end
                 end
             end)
@@ -87,6 +97,30 @@ vim.api.nvim_create_autocmd("BufDelete", {
         -- Only sync if it's a real file
         if filepath ~= "" and client then
             local payload = vim.json.encode({ type = 'closeFile', path = filepath })
+            client:write(payload)
+        end
+    end
+})
+
+-- Autocommand to send cursor position
+vim.api.nvim_create_autocmd({"CursorMoved", "CursorMovedI"}, {
+    pattern = "*",
+    callback = function()
+        if is_remote_update then return end
+        
+        local filepath = vim.fn.expand("%:p")
+        if filepath ~= "" and vim.bo.buftype == "" and client then
+            local cursor = vim.api.nvim_win_get_cursor(0)
+            -- Neovim is 1-based line, VS Code is 0-based
+            local line = cursor[1] - 1
+            local col = cursor[2]
+            
+            local payload = vim.json.encode({
+                type = 'cursorMove',
+                path = filepath,
+                line = line,
+                character = col
+            })
             client:write(payload)
         end
     end
