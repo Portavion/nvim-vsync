@@ -1,0 +1,8 @@
+{
+  "name": "vscode-nvim-sync",
+  "displayName": "VSCode Nvim Sync",
+  "version": "0.0.1",
+  "engines": { "vscode": "^1.80.0" },
+  "activationEvents": [ "*" ],
+  "main": "./extension.js"
+}
