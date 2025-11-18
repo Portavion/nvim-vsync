@@ -26,11 +26,26 @@ function activate(context) {
             if (message.type === 'openFile' && message.path) {
                 // Prevent triggering our own event listener
                 isRemoteUpdate = true;
-                
+
                 const doc = await vscode.workspace.openTextDocument(message.path);
                 await vscode.window.showTextDocument(doc);
-                
+
                 // Reset flag after short delay
+                setTimeout(() => { isRemoteUpdate = false; }, 100);
+            } else if (message.type === 'closeFile' && message.path) {
+                isRemoteUpdate = true;
+
+                // Find and close the tab(s) matching the file path
+                const targetPath = message.path;
+                // Using TabGroups API (VS Code 1.67+)
+                for (const group of vscode.window.tabGroups.all) {
+                    for (const tab of group.tabs) {
+                        if (tab.input instanceof vscode.TabInputText && tab.input.uri.fsPath === targetPath) {
+                            await vscode.window.tabGroups.close(tab);
+                        }
+                    }
+                }
+
                 setTimeout(() => { isRemoteUpdate = false; }, 100);
             }
         } catch (e) {
@@ -40,7 +55,7 @@ function activate(context) {
 
     // 3. Send active file path when user switches tabs
     let activeEditor = vscode.window.activeTextEditor;
-    
+
     vscode.window.onDidChangeActiveTextEditor(editor => {
         if (editor && !isRemoteUpdate) {
             const filePath = editor.document.uri.fsPath;
@@ -51,8 +66,16 @@ function activate(context) {
             }
         }
     }, null, context.subscriptions);
+
+    // 4. Listen for file closing
+    vscode.workspace.onDidCloseTextDocument(doc => {
+        if (!isRemoteUpdate && doc.uri.scheme === 'file') {
+            const payload = JSON.stringify({ type: 'closeFile', path: doc.uri.fsPath });
+            client.write(payload);
+        }
+    }, null, context.subscriptions);
 }
 
-function deactivate() {}
+function deactivate() { }
 
 module.exports = { activate, deactivate };

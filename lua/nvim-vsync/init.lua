@@ -18,16 +18,39 @@ local function connect()
             -- Schedule the buffer change on the main UI thread
             vim.schedule(function()
                 local success, decoded = pcall(vim.json.decode, chunk)
-                if success and decoded.type == 'openFile' and decoded.path then
-                    local current_file = vim.fn.expand('%:p')
-                    
-                    -- If we are already editing this file, do nothing
-                    if current_file ~= decoded.path then
-                        is_remote_update = true
-                        -- 'drop' is better than 'edit' as it switches to open window if available
-                        vim.cmd('drop ' .. vim.fn.fnameescape(decoded.path))
-                        -- Reset flag after a brief moment to allow autocmds to settle
-                        vim.defer_fn(function() is_remote_update = false end, 100)
+                if success then
+                    if decoded.type == 'openFile' and decoded.path then
+                        local current_file = vim.fn.expand('%:p')
+                        
+                        -- If we are already editing this file, do nothing
+                        if current_file ~= decoded.path then
+                            is_remote_update = true
+                            -- 'drop' is better than 'edit' as it switches to open window if available
+                            vim.cmd('drop ' .. vim.fn.fnameescape(decoded.path))
+                            -- Reset flag after a brief moment to allow autocmds to settle
+                            vim.defer_fn(function() is_remote_update = false end, 100)
+                        end
+                    elseif decoded.type == 'closeFile' and decoded.path then
+                        local target_path = decoded.path
+                        local bufnr = vim.fn.bufnr(target_path)
+                        
+                        -- Fallback: try to match by iterating buffers if exact match failed
+                        if bufnr == -1 then
+                            for _, b in ipairs(vim.api.nvim_list_bufs()) do
+                                local b_name = vim.api.nvim_buf_get_name(b)
+                                if b_name == target_path then
+                                    bufnr = b
+                                    break
+                                end
+                            end
+                        end
+
+                        if bufnr ~= -1 and vim.api.nvim_buf_is_valid(bufnr) then
+                            is_remote_update = true
+                            -- Delete the buffer safely
+                            pcall(vim.cmd, 'bdelete ' .. bufnr)
+                            vim.defer_fn(function() is_remote_update = false end, 100)
+                        end
                     end
                 end
             end)
@@ -49,6 +72,21 @@ vim.api.nvim_create_autocmd("BufEnter", {
         if filepath ~= "" and vim.bo.buftype == "" and client then
             local payload = vim.json.encode({ type = 'openFile', path = filepath })
             -- Write to socket
+            client:write(payload)
+        end
+    end
+})
+
+-- Autocommand to send file path on buffer delete (close)
+vim.api.nvim_create_autocmd("BufDelete", {
+    pattern = "*",
+    callback = function()
+        if is_remote_update then return end
+        
+        local filepath = vim.fn.expand("<afile>:p")
+        -- Only sync if it's a real file
+        if filepath ~= "" and client then
+            local payload = vim.json.encode({ type = 'closeFile', path = filepath })
             client:write(payload)
         end
     end
