@@ -31,7 +31,7 @@ const server = net.createServer((socket) => {
     });
 });
 
-const PORT = 3000;
+const PORT = process.env.VSYNC_PORT || process.argv[2] || 55666;
 server.listen(PORT, () => {
     console.log(`Sync server running on port ${PORT}`);
 });

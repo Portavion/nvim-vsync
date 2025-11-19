@@ -25,7 +25,11 @@ function activate(context) {
         if (client) { return; }
         client = new net.Socket();
 
-        client.connect(3000, '127.0.0.1', () => {
+        const config = vscode.workspace.getConfiguration('nvim-vsync');
+        const host = config.get('host', '127.0.0.1');
+        const port = config.get('port', 55666);
+
+        client.connect(port, host, () => {
             console.log('Connected to Sync Server');
             vscode.window.setStatusBarMessage('Nvim Sync: Connected', 3000);
         });

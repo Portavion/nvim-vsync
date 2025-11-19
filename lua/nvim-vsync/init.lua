@@ -1,12 +1,22 @@
 -- lua/sync_plugin.lua
+local M = {}
 local uv = vim.loop -- Use vim.uv on Neovim 0.10+
 local client = nil
 local is_remote_update = false
 local is_enabled = false
 
+local config = {
+    host = "127.0.0.1",
+    port = 55666
+}
+
+function M.setup(opts)
+    config = vim.tbl_deep_extend("force", config, opts or {})
+end
+
 local function connect()
     client = uv.new_tcp()
-    client:connect("127.0.0.1", 3000, function(err)
+    client:connect(config.host, config.port, function(err)
         if err then
             print("Sync Error: " .. err)
             return
@@ -73,7 +83,7 @@ end
 local function toggle_sync()
     is_enabled = not is_enabled
     if is_enabled then
-        print("VSync: Enabled")
+        print("VSync: Enabled (Port " .. config.port .. ")")
         if not client then
             connect()
         end
@@ -143,3 +153,5 @@ vim.api.nvim_create_autocmd({"CursorMoved", "CursorMovedI"}, {
         end
     end
 })
+
+return M

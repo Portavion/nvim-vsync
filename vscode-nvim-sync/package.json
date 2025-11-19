@@ -2,15 +2,34 @@
   "name": "vscode-nvim-sync",
   "displayName": "VSCode Nvim Sync",
   "version": "0.0.1",
-  "engines": { "vscode": "^1.80.0" },
-  "activationEvents": [ "*" ],
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "activationEvents": [
+    "*"
+  ],
   "contributes": {
     "commands": [
       {
         "command": "nvim-vsync.toggle",
-        "title": "Nvim Sync: Toggle"
+        "title": "Toggle Nvim Sync"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "Nvim VSync",
+      "properties": {
+        "nvim-vsync.host": {
+          "type": "string",
+          "default": "127.0.0.1",
+          "description": "Host address for the sync server"
+        },
+        "nvim-vsync.port": {
+          "type": "number",
+          "default": 55666,
+          "description": "Port number for the sync server"
+        }
+      }
+    }
   },
   "main": "./extension.js"
 }
