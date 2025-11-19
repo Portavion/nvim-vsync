@@ -23,8 +23,7 @@ Add this to your Neovim configuration:
 {
   'portavion/nvim-vsync',
   config = function()
-    -- Plugin auto-loads via plugin/nvim-vsync.lua
-    -- No additional configuration needed
+    require('nvim-vsync').setup({})
   end,
 }
 ```
@@ -49,11 +48,20 @@ Plug 'portavion/nvim-vsync'
 node sync-server.js
 ```
 
-The server will run on port 3000 by default.
+The server will run on port 55666 by default.
 
-2. **Open Neovim** - The plugin will automatically connect to the sync server.
+2. **Open Neovim**
+   The plugin is installed but disabled by default. To enable synchronization, run the command:
+   ```vim
+   :VSync
+   ```
 
-3. **Optional: Install VS Code extension** - Located in `vscode-nvim-sync/` directory.
+3. **Open VS Code**
+   Install the extension from the `vscode-nvim-sync/` directory.
+   To enable synchronization, open the Command Palette (Cmd+Shift+P) and run:
+   `Nvim Sync: Toggle Nvim Sync`
+   
+   Alternatively, click the "Nvim Sync" item in the status bar.
 
 ## How it Works
 
@@ -63,12 +71,37 @@ The server will run on port 3000 by default.
 
 ## Configuration
 
-Currently, the plugin connects to `127.0.0.1:3000` by default. To customize:
+The default port is `55666`. You can configure the host and port as follows:
+
+### Neovim
+
+Pass options to the setup function:
 
 ```lua
--- In your Neovim config, before the plugin loads
-vim.g.nvim_vsync_host = '127.0.0.1'
-vim.g.nvim_vsync_port = 3000
+require('nvim-vsync').setup({
+    host = "127.0.0.1",
+    port = 55666 -- Custom port
+})
+```
+
+### VS Code
+
+Go to Settings and search for `nvim-vsync`, or edit `settings.json`:
+
+```json
+{
+    "nvim-vsync.host": "127.0.0.1",
+    "nvim-vsync.port": 55666
+}
+```
+
+### Sync Server
+
+You can set the port using an environment variable or command line argument:
+
+```bash
+# Using environment variable
+VSYNC_PORT=55666 node sync-server.js
 ```
 
 ## Troubleshooting
