@@ -2,6 +2,7 @@
 local uv = vim.loop -- Use vim.uv on Neovim 0.10+
 local client = nil
 local is_remote_update = false
+local is_enabled = false
 
 local function connect()
     client = uv.new_tcp()
@@ -69,13 +70,30 @@ local function connect()
 end
 
 -- Initialize connection
-connect()
+local function toggle_sync()
+    is_enabled = not is_enabled
+    if is_enabled then
+        print("VSync: Enabled")
+        if not client then
+            connect()
+        end
+    else
+        print("VSync: Disabled")
+        if client then
+            client:close()
+            client = nil
+        end
+    end
+end
+
+-- Create user command
+vim.api.nvim_create_user_command('VSync', toggle_sync, {})
 
 -- Autocommand to send file path on buffer enter
 vim.api.nvim_create_autocmd("BufEnter", {
     pattern = "*",
     callback = function()
-        if is_remote_update then return end
+        if not is_enabled or is_remote_update then return end
         
         local filepath = vim.fn.expand("%:p")
         -- Only sync if it's a real file (not empty or special buffer)
@@ -91,7 +109,7 @@ vim.api.nvim_create_autocmd("BufEnter", {
 vim.api.nvim_create_autocmd("BufDelete", {
     pattern = "*",
     callback = function()
-        if is_remote_update then return end
+        if not is_enabled or is_remote_update then return end
         
         local filepath = vim.fn.expand("<afile>:p")
         -- Only sync if it's a real file
@@ -106,7 +124,7 @@ vim.api.nvim_create_autocmd("BufDelete", {
 vim.api.nvim_create_autocmd({"CursorMoved", "CursorMovedI"}, {
     pattern = "*",
     callback = function()
-        if is_remote_update then return end
+        if not is_enabled or is_remote_update then return end
         
         local filepath = vim.fn.expand("%:p")
         if filepath ~= "" and vim.bo.buftype == "" and client then
