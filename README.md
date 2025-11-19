@@ -43,7 +43,6 @@ Plug 'portavion/nvim-vsync'
 ## Setup
 
 1. **Start the sync server:**
-
 ```bash
 node sync-server.js
 ```
@@ -56,8 +55,11 @@ The server will run on port 55666 by default.
    :VSync
    ```
 
-3. **Open VS Code**
-   Install the extension from the `vscode-nvim-sync/` directory.
+3. **Install the VS Code extension**
+   1. Install `vsce` if not already installed: `npm install -g @vscode/vsce`
+   2. Navigate to the extension directory: `cd vscode-nvim-sync`
+   3. Package the extension: `vsce package`
+   4. Install the generated `.vsix` file: `code --install-extension vscode-nvim-sync-0.0.1.vsix`
    To enable synchronization, open the Command Palette (Cmd+Shift+P) and run:
    `Nvim Sync: Toggle Nvim Sync`
    
